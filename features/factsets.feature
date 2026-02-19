@@ -22,10 +22,10 @@ Feature: Handle factsets properly
   @puppet6
   Scenario: Run trusted_extensions tests on nodes where pp_datacenter is PDK
     Given existing control repo "factsets"
-    When I run onceover command "run spec" with class "role::trusted_extensions" on nodes "centos7_trusted_extensions_top,centos7_trusted_extensions_nested"
+    When I run onceover command "run spec" with class "role::trusted_extensions" on nodes "centos7_trusted_extensions_top,centos7_trusted_extensions_top_explicit,centos7_trusted_extensions_nested"
     Then I should not see any errors
 
-  # Spec tests should only pass on the centos7_trusted_extensions_top and
+  # Spec tests should only pass on the centos7_trusted_extensions_top, centos7_trusted_extensions_top_explicit, and
   #   centos7_trusted_extensions_nested factsets. The rest should fail
   @puppet6
   Scenario: Run trusted_extensions tests on nodes where pp_datacenter is not set
@@ -39,7 +39,7 @@ Feature: Handle factsets properly
     When I run onceover command "run spec" with class "role::trusted_external" on nodes "centos7_trusted_external_top,centos7_trusted_external_nested"
     Then I should not see any errors
 
-  # Spec tests should only pass on the centos7_trusted_externalq_top and
+  # Spec tests should only pass on the centos7_trusted_external_top and
   #   centos7_trusted_external_nested factsets. The rest should fail
   @puppet6
   Scenario: Run trusted_external tests on nodes where $trusted['external'] is not specified

@@ -369,7 +369,7 @@ You can add trusted facts to the factsets by creating a new section called trust
     "architecture": "x86_64",
 ```
 
-Notice that the `extensions` part is implied. The first fact in that example translates to `$trusted['extensions']['pp_role']` in Puppet code.
+Notice that the `extensions` parent is implicit, but can optionally be defined explicitly. The first fact in the above example translates to `$trusted['extensions']['pp_role']` in Puppet code.
 
 Alternatively, if you generated your factset using the PE client tools your trusted facts will be nested under the **values** hash. For example:
 
