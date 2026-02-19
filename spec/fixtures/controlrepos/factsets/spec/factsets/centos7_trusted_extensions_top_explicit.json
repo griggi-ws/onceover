@@ -2,7 +2,9 @@
   "name": "pe-201980-agent1.puppetdebug.vlan",
   "trusted": {
     "certname": "factset-trusted-certname",
-    "pp_datacenter": "PDX"
+    "extensions": {
+      "pp_datacenter": "PDX"
+    }
   },
   "values": {
     "aio_agent_build": "6.16.0",

@@ -424,24 +424,14 @@
     },
     "path": "/root/.rbenv/shims:/root/.rbenv/bin:/root/.rbenv/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/opt/puppetlabs/bin:/root/bin:/root/bin:/root/bin",
     "pe_patch": {
-      "package_updates": [
-
-      ],
+      "package_updates": [],
       "package_update_count": 0,
-      "missing_update_kbs": [
-
-      ],
-      "security_package_updates": [
-
-      ],
+      "missing_update_kbs": [],
+      "security_package_updates": [],
       "security_package_update_count": 0,
-      "blackouts": {
-      },
-      "pinned_packages": [
-
-      ],
-      "last_run": {
-      },
+      "blackouts": {},
+      "pinned_packages": [],
+      "last_run": {},
       "patch_group": "",
       "reboot_override": "default",
       "reboots": {
@@ -453,9 +443,7 @@
         "security_update_file": "Security update file not found, update information invalid"
       },
       "blocked": false,
-      "blocked_reasons": [
-
-      ]
+      "blocked_reasons": []
     },
     "physicalprocessorcount": 1,
     "platform_symlink_writable": true,
@@ -516,6 +504,7 @@
     },
     "timezone": "UTC",
     "trusted": {
+      "certname": "factset-trusted-certname",
       "extensions": {
         "pp_datacenter": "PDX"
       }

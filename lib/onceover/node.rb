@@ -28,6 +28,9 @@ class Onceover
         # If we still can't find any, return an empty hash so the following doesn't blow up user written tests:
         #   let(:trusted_facts) { trusted_facts }
         @trusted_set = {} if @trusted_set.nil?
+        
+        # Merge trusted extensions to root level to support the format output by a compiler without modification
+        @trusted_set = @trusted_set['extensions'].merge(@trusted_set) if @trusted_set && @trusted_set['extensions'].is_a?(Hash)
 
         # First see if we can find a 'trusted_external' hash at the top level of our factset 
         @trusted_external_set = Onceover::Controlrepo.trusted_external_facts[facts_file_index]
