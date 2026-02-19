@@ -23,8 +23,8 @@ class Onceover
 
         # First see if we can find a 'trusted' hash at the top level of our factset 
         @trusted_set = Onceover::Controlrepo.trusted_facts[facts_file_index]
-        # If we don't find it, attempt to find a 'trusted.extensions' hash nested in our fact_set
-        @trusted_set = @fact_set.dig('trusted', 'extensions') if @trusted_set.nil?
+        # If we don't find it, attempt to find a 'trusted' hash nested in our fact_set
+        @trusted_set = @fact_set.dig('trusted') if @trusted_set.nil?
         # If we still can't find any, return an empty hash so the following doesn't blow up user written tests:
         #   let(:trusted_facts) { trusted_facts }
         @trusted_set = {} if @trusted_set.nil?
