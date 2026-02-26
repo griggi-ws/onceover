@@ -4,7 +4,9 @@ gemspec
 
 gem 'pry-coolline', '> 0.0', '< 1.0.0'
 
-gem 'openvox', ENV['PUPPET_VERSION'] || '~> 8'
+# Bug in upstream openvox prevents Deferred resolution of Puppet-language functions
+gem 'openvox', git: 'https://github.com/griggi-ws/openvox.git', branch: 'deferred_puppetlang'
+# gem 'openvox', ENV['PUPPET_VERSION'] || '~> 8'
 
 group :test do
   # Required for the final controlrepo tests
