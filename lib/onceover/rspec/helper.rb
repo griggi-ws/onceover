@@ -99,9 +99,9 @@ class Onceover
         def mock_functions_puppet_code(class_name: nil, node_name: nil)
           code_lines = []
 
-          # Add onceover variables if provided
-          code_lines << "$onceover_class = '#{class_name}'" if class_name
-          code_lines << "$onceover_node = '#{node_name}'" if node_name
+          # Add onceover variables (always set for pre_condition compatibility)
+          code_lines << "$onceover_class = '#{class_name}'"
+          code_lines << "$onceover_node = '#{node_name}'"
           code_lines << ""
 
           # Add user pre_conditions
@@ -178,8 +178,10 @@ class Onceover
           let(:node) { context[:certname] } if context[:certname]
 
           let(:pre_condition) do
+            # Auto-detect class_name from describe block if not provided
+            # (top_level_description is used by RSpec anyhow)
             Onceover::RSpec::Helper.mock_functions_puppet_code(
-              class_name: context[:class_name],
+              class_name: context[:class_name] || self.class.top_level_description,
               node_name: context[:node_name] || context[:name]
             )
           end
