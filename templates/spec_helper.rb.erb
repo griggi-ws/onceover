@@ -4,6 +4,7 @@ end
 
 require 'rspec_junit_formatter'
 require 'onceover/rspec/formatters'
+require 'onceover/rspec/helper'
 
 RSpec.configure do |c|
   # Create onceover settings to be accessed by formatters
@@ -33,3 +34,38 @@ RSpec.configure do |c|
   Puppet::Util::Log.newdestination(:console)
 <% end -%>
 end
+
+<% unless opts[:no_workarounds] -%>
+# The windows_adsi provider also has an issue where the contructor takes
+# a different number of arguments depending on whether the ADSI
+# underlying connectivity exists. This causes the following error:
+#
+#      wrong number of arguments (given 1, expected 0)
+#
+# This fixes that if we aren't using Windows
+begin
+  require 'puppet/util/windows'
+  require 'puppet/util/windows/adsi'
+  Puppet::Util::Windows::ADSI.computer_name
+rescue LoadError, StandardError
+  # Declare an entire mocked module because for some reason we can't load it unless we are on Windows
+  module Puppet
+    module Util
+      module Windows
+        module ADSI
+          class ADSIObject; end
+          class User < ADSIObject; end
+          class UserProfile; end
+          class Group < ADSIObject; end
+        end
+        module File; end
+        module Registry; end
+        module SID
+          class Principal; end
+        end
+        class EventLog; end
+      end
+    end
+  end
+end
+<% end -%>
