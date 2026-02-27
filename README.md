@@ -30,8 +30,7 @@ It includes automatic parsing of the `Puppetfile`, `environment.conf` and others
     - [Plugins](#plugins)
     - [Overriding Onceover's Templates](#overriding-onceovers-templates)
     - [Accessing Onceover in a traditional RSpec test](#accessing-onceover-in-a-traditional-rspec-test)
-    - [Accessing fact sets in a traditional RSpec test](#accessing-fact-sets-in-a-traditional-rspec-test)
-    - [Accessing Roles in a traditional RSpec test](#accessing-roles-in-a-traditional-rspec-test)
+    - [Other (possibly less useful) methods](#other-possibly-less-useful-methods)
     - [Filtering](#filtering)
     - [Extra Configuration](#extra-configuration)
     - [Ruby Warnings](#ruby-warnings)
@@ -612,6 +611,49 @@ This will do the following things:
 
 When using this gem adding your own spec tests is exactly the same as if you were to add them to a module, simply create them under `spec/{classes,defines,etc.}` in the Controlrepo and they will be run like normal, along with all of the `it { should compile }` tests.
 
+Onceover provides a shared RSpec context called `'onceover'` that gives your custom specs the same environment as the auto-generated tests. The simplest way to use it:
+
+```ruby
+# spec/classes/role__webserver_spec.rb
+require 'spec_helper'
+
+describe 'role::webserver' do
+  Onceover::RSpec::Helper.factsets.each do |factset|
+    context "on #{factset[:name]}" do
+      include_context 'onceover', factset
+
+      it { is_expected.to compile.with_all_deps }
+
+      # Add your own expectations here
+      it { is_expected.to contain_package('nginx') }
+    end
+  end
+end
+```
+
+The shared context automatically provides:
+
+- `facts`, `trusted_facts`, and `trusted_external_data` from the factset
+- `pre_condition` with your `spec/pre_conditions/*.pp` files
+- Function mocking from `onceover.yaml`
+- `before`/`after` conditions from `onceover.yaml`
+- Cross-platform workarounds (Windows ADSI stubs, etc.)
+- `$onceover_class` and `$onceover_node` variables in the Puppet scope
+
+You can filter factsets to run tests only on matching nodes:
+
+```ruby
+# Only test on RedHat-family systems
+Onceover::RSpec::Helper.factsets(filter: { 'os' => { 'family' => 'RedHat' } }).each do |factset|
+  # ...
+end
+
+# Only test on Windows
+Onceover::RSpec::Helper.factsets(filter: { 'kernel' => 'windows' }).each do |factset|
+  # ...
+end
+```
+
 ### Exposing Puppet output
 
 If you want to see Puppet's output, you can set the `SHOW_PUPPET_OUTPUT` environment variable to `true`, eg:
@@ -739,10 +781,54 @@ Onceover uses templates to create a bunch of files in the `.onceover` directory,
 
 ### Accessing Onceover in a traditional RSpec test
 
-If you would like to use `onceover.yaml` to manage which tests you want to run, but want more than just `it { should_compile }` tests to be run you can write you own as follows:
+There are two APIs for accessing Onceover's test data in custom specs:
+
+| API | What it provides |
+|-----|------------------|
+| `Onceover::RSpec::Helper` (recommended) | Full Onceover context: facts, trusted_facts, trusted_external_data, pre_conditions, function mocking, before/after conditions, cross-platform workarounds, `$onceover_class`/`$onceover_node` variables |
+| `Onceover::Controlrepo.facts` (legacy) | Raw fact hashes only - you must manually set up `let(:facts)` and won't get pre_conditions, mocking, or workarounds |
+
+For adding custom tests alongside auto-generated ones, see [Adding your own spec tests](#adding-your-own-spec-tests).
+
+#### Iterating over the test matrix
+
+If you want to run custom shared examples across every class/node combination in your `onceover.yaml` test matrix:
 
 ```ruby
-# spec/classes/role_spec.rb
+# spec/classes/soe_spec.rb
+require 'spec_helper'
+require 'helpers/shared_examples'
+
+Onceover::RSpec::Helper.spec_tests do |test|
+  describe test[:class_name] do
+    context "on #{test[:node_name]}" do
+      include_context 'onceover', test
+
+      it_behaves_like 'soe'
+    end
+  end
+end
+```
+
+The `test` hash includes: `class_name`, `node_name`, `facts`, `trusted_facts`, `trusted_external_data`, `certname`, and `tags`. The shared context provides the full Onceover environment.
+
+This approach uses RSpec [shared examples](https://web.archive.org/web/20220319011206/https://relishapp.com/rspec/rspec-core/docs/example-groups/shared-examples) to define reusable test suites that run across all class/node combinations in your `onceover.yaml`, including any [pre_conditions](#using-workarounds) you have set up. The example above assumes you have defined an `soe` shared example in `spec/helpers/shared_examples.rb`:
+
+```ruby
+# spec/helpers/shared_examples.rb
+RSpec.shared_examples 'soe' do
+  it { is_expected.to compile.with_all_deps }
+  it { is_expected.to contain_class('profile::base') }
+  # Add your standard operating environment checks here
+end
+```
+
+<details>
+<summary>Legacy API (facts only)</summary>
+
+The older `Onceover::Controlrepo` API requires manual `let` blocks and only provides facts and pre_conditions - no function mocking, workarounds, or `$onceover_class`/`$onceover_node` variables:
+
+```ruby
 require 'spec_helper'
 require 'onceover/controlrepo'
 require 'helpers/shared_examples'
@@ -761,30 +847,99 @@ Onceover::Controlrepo.new.spec_tests do |class_name, node_name, facts, trusted_f
 end
 ```
 
-This will use the `soe` [shared example](https://web.archive.org/web/20220319011206/https://relishapp.com/rspec/rspec-core/docs/example-groups/shared-examples) on all of the tests that are configured in your `onceover.yaml` including any [pre_conditions](#using-workarounds) that you have set up.
+</details>
 
-**Note:** Onceover will automatically run any extra Rspec tests that it finds in the normal directories `spec/{classes,defines,unit,functions,hosts,integration,types}` so you can easily use auto-generated spec tests in conjunction with your own Rspec tests.
+#### Iterating over factsets
 
-### Accessing fact sets in a traditional RSpec test
-
-We can access all of our fact sets using `Onceover::Controlrepo.facts`. Normally it would be implemented something like this:
+To test a specific class against all configured factsets:
 
 ```ruby
-Onceover::Controlrepo.facts.each do |facts|
-  context "on #{facts['fqdn']}" do
-    let(:facts) { facts }
-    it { should compile }
+require 'spec_helper'
+
+describe 'profile::base' do
+  Onceover::RSpec::Helper.factsets.each do |factset|
+    context "on #{factset[:name]}" do
+      include_context 'onceover', factset
+      it { is_expected.to compile }
+    end
   end
 end
 ```
 
-### Other (possibly less useful) methods
+Each factset hash includes: `name`, `facts`, `trusted_facts`, `trusted_external_data`, and `certname`. The shared context provides the full Onceover environment.
 
-The following code will test all roles that onceover can find (ignoring the ones configured in `onceover.yaml`) on all nodes in native rspec:
+<details>
+<summary>Legacy API (facts only)</summary>
+
+The older `Onceover::Controlrepo.facts` method returns raw fact hashes without trusted facts, pre_conditions, or other Onceover features:
 
 ```ruby
 require 'spec_helper'
 require 'onceover/controlrepo'
+
+describe 'profile::base' do
+  Onceover::Controlrepo.facts.each do |facts|
+    context "on #{facts['fqdn']}" do
+      let(:facts) { facts }
+      it { should compile }
+    end
+  end
+end
+```
+
+</details>
+
+**Note:** Onceover will automatically run any extra Rspec tests that it finds in the normal directories `spec/{classes,defines,unit,functions,hosts,integration,types}` so you can easily use auto-generated spec tests in conjunction with your own Rspec tests.
+
+### Other (possibly less useful) methods
+
+The following code will test all roles that onceover can find (ignoring the ones configured in `onceover.yaml`) on all nodes:
+
+```ruby
+require 'spec_helper'
+
+Onceover::Controlrepo.roles.each do |role|
+  describe role do
+    Onceover::RSpec::Helper.factsets.each do |factset|
+      context "on #{factset[:name]}" do
+        include_context 'onceover', factset
+        it { is_expected.to compile }
+      end
+    end
+  end
+end
+```
+
+This will iterate over each role in the controlrepo and test that it compiles with each set of facts.
+
+The same can also be done with profiles just by using the `profiles` method instead:
+
+```ruby
+require 'spec_helper'
+
+Onceover::Controlrepo.profiles.each do |profile|
+  describe profile do
+    Onceover::RSpec::Helper.factsets.each do |factset|
+      context "on #{factset[:name]}" do
+        include_context 'onceover', factset
+        it { is_expected.to compile }
+      end
+    end
+  end
+end
+```
+
+It is not limited to just doing simple "It should compile" tests. You can put any tests you want in here.
+
+<details>
+<summary>Legacy API (facts only)</summary>
+
+The older approach using `Onceover::Controlrepo.facts`:
+
+```ruby
+require 'spec_helper'
+require 'onceover/controlrepo'
+
 Onceover::Controlrepo.roles.each do |role|
   describe role do
     Onceover::Controlrepo.facts.each do |facts|
@@ -797,43 +952,48 @@ Onceover::Controlrepo.roles.each do |role|
 end
 ```
 
-This will iterate over each role in the controlrepo and test that it compiles with each set of facts.
+</details>
 
-The same can also be done with profiles just by using the profiles method instead:
+### Filtering
+
+You can filter factsets based on the value of any fact, including structured facts. The filter does deep matching into nested hashes.
+
+Pass a `filter:` hash to the `factsets` method:
 
 ```ruby
 require 'spec_helper'
-require 'onceover'
-Onceover::Controlrepo.profiles.each do |profile|
-  describe profile do
-    Onceover::Controlrepo.facts.each do |facts|
-      context "on #{facts['fqdn']}" do
-        let(:facts) { facts }
-        it { should compile }
-      end
+
+describe 'profile::windows_appserver' do
+  Onceover::RSpec::Helper.factsets(filter: { 'kernel' => 'windows' }).each do |factset|
+    context "on #{factset[:name]}" do
+      include_context 'onceover', factset
+      it { is_expected.to compile }
     end
   end
 end
 ```
 
-It is not limited to just doing simple "It should compile" tests. You can put any tests you want in here.
+Filter on nested facts using nested hashes:
 
-Also since the `profiles`, `roles` and `facts` methods simply return arrays, you can iterate over them however you would like i.e. you could write a different set of tests for each profile and then just use the `facts` method to run those tests on every fact set.
+```ruby
+# Only RedHat family (RHEL, CentOS, etc.)
+Onceover::RSpec::Helper.factsets(filter: { 'os' => { 'family' => 'RedHat' } })
 
-### Filtering
+# Only Debian-based systems
+Onceover::RSpec::Helper.factsets(filter: { 'os' => { 'family' => 'Debian' } })
+```
 
-You can also filter your fact sets based on the value of any fact, including structured facts. (It will drill down into nested hashes and match those too, it's not just a dumb equality match)
+<details>
+<summary>Legacy API (facts only)</summary>
 
-Just pass a hash to the `facts` method and it will return only the fact sets with facts that match the hash e.g. Testing a certain profile on against only your Windows fact sets:
+The older `Onceover::Controlrepo.facts` method also supports filtering, but only returns raw facts:
 
 ```ruby
 require 'spec_helper'
-require 'onceover'
+require 'onceover/controlrepo'
 
 describe 'profile::windows_appserver' do
-  Onceover::Controlrepo.facts({
-    'kernel' => 'windows'
-    }).each do |facts|
+  Onceover::Controlrepo.facts({ 'kernel' => 'windows' }).each do |facts|
     context "on #{facts['fqdn']}" do
       let(:facts) { facts }
       it { should compile }
@@ -841,6 +1001,8 @@ describe 'profile::windows_appserver' do
   end
 end
 ```
+
+</details>
 
 ### Extra Configuration
 
