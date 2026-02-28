@@ -122,19 +122,29 @@ class Onceover
       # We want to supress warnings for this bit
       old_level = logger.level
       logger.level = :error
+
+      # Check groups first
       if Onceover::Group.find(thing)
         logger.level = old_level
         return Onceover::Group.find(thing).members
-      elsif Onceover::Class.find(thing)
-        logger.level = old_level
-        return [Onceover::Class.find(thing)]
-      elsif Onceover::Node.find(thing)
-        logger.level = old_level
-        return [Onceover::Node.find(thing)]
-      else
-        logger.level = old_level
-        raise "Could not find #{thing} in list of classes, nodes or groups"
       end
+
+      # Check classes - handle both single results and arrays from regex
+      result = Onceover::Class.find(thing)
+      if result && (result.is_a?(Array) ? !result.empty? : true)
+        logger.level = old_level
+        return Array(result).flatten
+      end
+
+      # Check nodes - handle both single results and arrays from regex
+      result = Onceover::Node.find(thing)
+      if result && (result.is_a?(Array) ? !result.empty? : true)
+        logger.level = old_level
+        return Array(result).flatten
+      end
+
+      logger.level = old_level
+      raise "Could not find #{thing} in list of classes, nodes or groups"
     end
 
     def self.subtractive_to_list(subtractive_hash)

@@ -2,19 +2,15 @@ classes:
   - "/role::/"
 
 nodes:
-  - CentOS-7.0-64
-  - CentOS-7.0-64-master
-  - CentOS-7.0-64-openstack
-  - Windows_Server-2008r2-64
-  - Windows_Server-2012r2-64
+  - /^CentOS-7\.0-64(-master)?$/ # Regex: matches CentOS-7.0-64 and CentOS-7.0-64-master
+  - CentOS-7.0-64-openstack # Missing factset - validates graceful handling
+  - /^Windows_Server/ # Regex: matches all Windows_Server factsets
 
 node_groups:
   centos:
-    - CentOS-7.0-64
-    - CentOS-7.0-64-master
+    - /^CentOS-7\.0-64(-master)?$/ # Regex: both CentOS-7.0-64 and CentOS-7.0-64-master
   windows:
-    - Windows_Server-2008r2-64
-    - Windows_Server-2012r2-64
+    - /^Windows_Server/ # Regex: both Windows Server factsets
   master:
     - CentOS-7.0-64-master
 
