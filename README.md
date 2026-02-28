@@ -238,12 +238,14 @@ It's important to note that in order to reference a group using the *include/exc
 
 ##### Minimal
 
+Both classes and nodes support regex patterns wrapped in `/`. This makes it easy to match multiple items without listing each one:
+
 ```yaml
 classes:
   - /^role::/
 
 nodes:
-  - Debian-10-amd64
+  - /^Debian/                 # Matches all Debian factsets
 
 test_matrix:
   - all_nodes:
@@ -267,16 +269,13 @@ classes:
   - '/^role/'                     # Note that this regex format requires `/`
 
 nodes:
-  - centos6a
-  - centos7b
+  - /^centos/                     # Regex: matches all factsets starting with 'centos'
   - server2008r2a
-  - ubuntu1404a
-  - ubuntu1604a
+  - /^ubuntu/                     # Regex: matches all factsets starting with 'ubuntu'
 
 node_groups:
   centos_severs:
-    - centos6a
-    - centos7b
+    - /^centos/                   # Regex patterns work in node_groups too
   ubuntu_servers:
     - ubuntu1404a
     - ubuntu1604a
