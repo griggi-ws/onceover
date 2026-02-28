@@ -131,13 +131,11 @@ class Onceover
 
         # Registers the from_json Puppet function needed for function mocking.
         def register_from_json_function!
-          return if @from_json_registered
-
+          # Always register, as the newfunction call is idempotent when the function already exists.
           Puppet::Parser::Functions.newfunction(:from_json, type: :rvalue) do |args|
             require 'multi_json'
             MultiJson.load(args[0])
           end
-          @from_json_registered = true
         end
 
         private
