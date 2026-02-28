@@ -6,9 +6,9 @@ describe "Onceover::RSpec::Helper" do
     # Reset memoized state between tests
     Onceover::RSpec::Helper.instance_variable_set(:@config, nil)
     Onceover::RSpec::Helper.instance_variable_set(:@controlrepo, nil)
-    Onceover::Node.instance_variable_set(:@all, nil)
-    Onceover::Class.instance_variable_set(:@all, nil)
-    Onceover::Group.instance_variable_set(:@all, nil)
+    Onceover::Node.class_variable_set(:@@all, [])
+    Onceover::Class.class_variable_set(:@@all, [])
+    Onceover::Group.class_variable_set(:@@all, [])
   end
 
   context "with function_mocking controlrepo" do
