@@ -670,7 +670,7 @@ This functionality is opt in, so to use it configure the following:
 ```yaml
 # onceover.yaml
 opts:
-  auto_vendored: true
+  :auto_vendored: true
 ```
 
 or on the cli:
